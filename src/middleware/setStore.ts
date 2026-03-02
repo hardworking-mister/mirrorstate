@@ -1,8 +1,8 @@
-import { Middleware } from "../types";
+import type { Middleware } from "../types";
 import { globalSignal, stateStore } from "../core";
 
 export const setStore: Middleware = async (ctx, next) => {
-  const { storeName, key, oldValue, newValue, type } = ctx
+  const { storeName, key, value, newValue, type } = ctx
   if (type !== "set") {
     return next()
   }

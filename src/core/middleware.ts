@@ -1,25 +1,21 @@
 import type { Middleware, Context } from "../types";
+import { setStore } from "../middleware";
 
 export class MiddlewareManager {
-  #middlewares: Middleware[] = []
+  // 默认中间件
+  #middlewares: Middleware[] = [setStore]
 
-  constructor(middlewares: Middleware[]) {
-    this.#middlewares = middlewares
-  }
-  use(fn: Middleware) {
-    this.#middlewares.push(fn)
+  use(middlewares: Middleware[]) {
+    this.#middlewares = [...middlewares, ...this.#middlewares]
   }
 
   async run(ctx: Context) {
-    const middlewares = [...this.#middlewares]
-    let i = -1
-    const dispatch = async (index: number): Promise<void> => {
+    let index = -1
+    const dispatch = async (i: number): Promise<void> => {
       if (i <= index) throw new Error('next() called multiple times')
-      i = index
-      const middleware = middlewares[i]
-
+      index = i
+      const middleware = this.#middlewares[i]
       if (!middleware) return
-
       await middleware(ctx, () => dispatch(i + 1))
     }
 
@@ -28,3 +24,5 @@ export class MiddlewareManager {
     return ctx
   }
 }
+
+export const middleware = new MiddlewareManager()

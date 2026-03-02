@@ -1,5 +1,4 @@
-import { globalSignal, stateStore } from "./core"
-import { MiddlewareManager } from "./core/middleware"
+import { globalSignal, stateStore, middleware } from "./core"
 import type { State, Initial } from "./types"
 import { setStore } from "./middleware"
 
@@ -29,7 +28,7 @@ export const cleanup = (id: string) => {
  * @returns 数据对象
  */
 export const useCreateStore = <T extends Record<string, (value?: any) => any>>(props: Initial<T>): State<T> => {
-  const { storeName, useManager, componentId, middlewares } = props
+  const { storeName, useManager, componentId, middlewares = [] } = props
   if (typeof storeName !== 'string') {
     throw new Error('storeName must be a string')
   }
@@ -52,28 +51,27 @@ export const useCreateStore = <T extends Record<string, (value?: any) => any>>(p
   }
 
   const compomentKey = compomentMapId.get(componentId) as Set<string | Function>
-
   const proxy = new Proxy(state, {
     get: (target: T, property) => {
       const key = String(property)
-      const middleware = new MiddlewareManager(middlewares)
       const set = (value: T[keyof T]) => {
+        const storeValue = stateStore.getValue(storeName, key)
         // 判断是否为获取
-        if (value !== void 0) {
+        if (value === void 0) {
+          middleware.use(middlewares)
           middleware.run({
             key,
-            type: "set",
+            type: "get",
             storeName,
-            value: stateStore,
+            value: storeValue,
           })
-          return stateStore
+          return target[key]()
         }
-        const storeValue = stateStore.getValue(storeName, key)
         // 判断和新值是否相等
         if (storeValue === value) {
           return storeValue
         }
-        middleware.use(setStore)
+        middleware.use(middlewares)
         middleware.run({
           key,
           type: "set",
