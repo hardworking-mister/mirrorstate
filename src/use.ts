@@ -1,6 +1,7 @@
-import { globalSignal } from "./PubSub"
-import { stateStore } from "./Store"
-import type { State, Initial } from "../types"
+import { globalSignal, stateStore } from "./core"
+import { MiddlewareManager } from "./core/middleware"
+import type { State, Initial } from "./types"
+import { setStore } from "./middleware"
 
 const compomentMapId = new Map<string, Set<string>>()
 
@@ -28,13 +29,14 @@ export const cleanup = (id: string) => {
  * @returns 数据对象
  */
 export const useCreateStore = <T extends Record<string, (value?: any) => any>>(props: Initial<T>): State<T> => {
-  const { storeName, useManager, componentId } = props
+  const { storeName, useManager, componentId, middlewares } = props
   if (typeof storeName !== 'string') {
     throw new Error('storeName must be a string')
   }
 
   const state = useManager()
 
+  // 如果仓库不存在 初始化仓库
   if (!stateStore.isStoreName(storeName)) {
     const current: Record<string, any> = {}
     for (const key in state) {
@@ -44,6 +46,7 @@ export const useCreateStore = <T extends Record<string, (value?: any) => any>>(p
     stateStore.add(storeName, current)
   }
 
+  // 判断组件是否为新组件
   if (!compomentMapId.has(componentId)) {
     compomentMapId.set(componentId, new Set())
   }
@@ -53,13 +56,32 @@ export const useCreateStore = <T extends Record<string, (value?: any) => any>>(p
   const proxy = new Proxy(state, {
     get: (target: T, property) => {
       const key = String(property)
-
+      const middleware = new MiddlewareManager(middlewares)
       const set = (value: T[keyof T]) => {
+        // 判断是否为获取
         if (value !== void 0) {
-          stateStore.setValue(storeName, key, value)
-          globalSignal.emit(`${storeName}-${key}`, value)
+          middleware.run({
+            key,
+            type: "set",
+            storeName,
+            value: stateStore,
+          })
+          return stateStore
         }
-        return target[key]()
+        const storeValue = stateStore.getValue(storeName, key)
+        // 判断和新值是否相等
+        if (storeValue === value) {
+          return storeValue
+        }
+        middleware.use(setStore)
+        middleware.run({
+          key,
+          type: "set",
+          storeName,
+          value: storeValue,
+          newValue: value
+        })
+        return value
       }
 
       if (!compomentKey.has(`${storeName}-${key}`)) {
