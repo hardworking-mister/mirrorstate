@@ -1,0 +1,20 @@
+{
+  "name": "mirrorstate",
+  "version": "1.0.0",
+  "description": "This is a global state management system that adopts a divide and conquer approach",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [],
+  "author": "hardworking-mister",
+  "license": "ISC",
+  "type": "commonjs"
+}
