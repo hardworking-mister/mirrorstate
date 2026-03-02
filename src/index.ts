@@ -1,4 +1,4 @@
-import { useCreateStore, batch, cleanup } from "./core/index.ts"
+import { useCreateStore, batch, cleanup } from "./core"
 
 export {
   useCreateStore,

@@ -1,6 +1,6 @@
 import { globalSignal } from "./PubSub"
 import { stateStore } from "./Store"
-import { State, Initial } from "../types/index.ts"
+import type { State, Initial } from "../types"
 
 const compomentMapId = new Map<string, Set<string>>()
 
