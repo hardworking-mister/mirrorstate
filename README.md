@@ -1,8 +1,11 @@
 # MirrorState
 
+[English](./README.en.md) | [中文](./README.md)
+
+---
 **组件自治的状态管理 · 让框架做框架的事**
 
-bug投递: 
+bug投递: hardworking-mister@qq.com
 
 ## 🎯 设计哲学
 

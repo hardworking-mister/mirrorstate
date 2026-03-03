@@ -1,9 +1,9 @@
 {
   "name": "mirrorstate",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "This is a global state management system that adopts a divide and conquer approach",
   "main": "dist/index.js",
-  "module": "dist/index.mjs",
+  "module": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
     "dist"
