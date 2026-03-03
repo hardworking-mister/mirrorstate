@@ -1,6 +1,5 @@
 import { globalSignal, stateStore, middleware } from "./core"
 import type { State, Initial } from "./types"
-import { setStore } from "./middleware"
 
 const compomentMapId = new Map<string, Set<string>>()
 

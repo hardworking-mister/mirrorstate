@@ -3,10 +3,11 @@ import { setStore } from "../middleware";
 
 export class MiddlewareManager {
   // 默认中间件
-  #middlewares: Middleware[] = [setStore]
+  #middlewares: Middleware[] = []
 
   use(middlewares: Middleware[]) {
-    this.#middlewares = [...middlewares, ...this.#middlewares]
+    this.#middlewares = middlewares
+    this.#middlewares.push(setStore)
   }
 
   async run(ctx: Context) {
