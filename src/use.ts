@@ -53,6 +53,9 @@ export const useCreateStore = <T extends Record<string, (value?: any) => any>>(p
   const proxy = new Proxy(state, {
     get: (target: T, property) => {
       const key = String(property)
+      if (typeof target[key] !== "function") {
+        throw Error(`${storeName}.${key} not function, value must is function`)
+      }
       const set = (value: T[keyof T]) => {
         const storeValue = stateStore.getValue(storeName, key)
         // 判断是否为获取
@@ -64,7 +67,7 @@ export const useCreateStore = <T extends Record<string, (value?: any) => any>>(p
             storeName,
             value: storeValue,
           })
-          return target[key]()
+          return (target[key] as Function)()
         }
         // 判断和新值是否相等
         if (storeValue === value) {
