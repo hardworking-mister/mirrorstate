@@ -1,10 +1,10 @@
 
-export type State<T extends Record<string, (value?: any) => any>> = {
-    [K in keyof T]: T[K] extends (value?: any) => infer R ? (value: R) => R : never;
+export type State<T extends Record<string, (value: any) => any>> = {
+    [K in keyof T]: (value?: ReturnType<T[K]>) => ReturnType<T[K]>
 }
 
 export type FixedState<T extends Record<string, (value?: any) => any>> = {
-    batch: () => { [K in keyof T]: T[K] extends (value?: any) => infer R ? R : never }
+    batch: () => { [K in keyof T]: T[K] extends (value?: any) => infer R ? (value?: R) => R : (value?: any) => any }
 }
 
 export type Context = {
@@ -32,9 +32,9 @@ export type Context = {
 export type Next = () => Promise<void>
 export type Middleware = (ctx: Context, next: Next) => Promise<void>
 
-export type Initial<T> = {
+export type Initial<T extends Record<string, (value: any) => any>> = {
     storeName: string,
     useManager: () => T,
     componentId: string,
-    middlewares: Middleware[]
+    middlewares?: Middleware[]
 }

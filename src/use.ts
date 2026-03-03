@@ -26,7 +26,7 @@ export const cleanup = (id: string) => {
  * @param props - 配置项
  * @returns 数据对象
  */
-export const useCreateStore = <T extends Record<string, (value?: any) => any>>(props: Initial<T>): State<T> => {
+export const useCreateStore = <T extends Record<string, (value: any) => any>>(props: Initial<T>): State<T> => {
   const { storeName, useManager, componentId, middlewares = [] } = props
   if (typeof storeName !== 'string') {
     throw new Error('storeName must be a string')
@@ -51,7 +51,7 @@ export const useCreateStore = <T extends Record<string, (value?: any) => any>>(p
 
   const compomentKey = compomentMapId.get(componentId) as Set<string | Function>
   const proxy = new Proxy(state, {
-    get: (target: T, property) => {
+    get: (target, property) => {
       const key = String(property)
       if (typeof target[key] !== "function") {
         throw Error(`${storeName}.${key} not function, value must is function`)
@@ -93,8 +93,7 @@ export const useCreateStore = <T extends Record<string, (value?: any) => any>>(p
       return set
     },
   })
-
-  return proxy as unknown as State<T>
+  return proxy
 }
 
 /**
@@ -113,3 +112,4 @@ export const batch = <T extends Record<string, any>>(storeName: string, value?: 
   }
   return state
 }
+
