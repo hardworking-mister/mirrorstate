@@ -59,6 +59,16 @@ class Store<T extends Record<string, any>> {
     getStore(storeName: string) {
         return this.#store.get(storeName) as T
     }
+
+    /**
+     * 更新整个仓库
+     * @param storeName - 仓库名字
+     * @param state - 新值
+     */
+    setStore(storeName: string, state: any) {
+        const store = this.getStore(storeName)
+        Object.assign(store, state)
+    }
 }
 
 

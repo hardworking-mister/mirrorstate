@@ -27,7 +27,7 @@ export const cleanup = (id: string) => {
  * @param props - 配置项
  * @returns 数据对象
  */
-export const useCreateStore = <T extends Record<string, (value: any) => any>>(props: Initial<T>): State<T> => {
+export const useCreateStore = <T extends Record<string, (value?: any) => any>>(props: Initial<T>): State<T> => {
   const { storeName, useManager, middlewares = [], componentId } = props
   if (typeof storeName !== 'string') {
     throw new Error('storeName must be a string')
@@ -67,16 +67,16 @@ export const useCreateStore = <T extends Record<string, (value: any) => any>>(pr
           middleware.run({
             key,
             type: "get",
-            newValue: (target[key] as Function)(),
+            target,
             storeName,
             store: stateStore.getStore(storeName),
-            triggerFn: target[key] as () => any
+            value
           })
           return (target[key] as Function)()
         }
         // 判断和新值是否相等
         if (storeValue === value) {
-          return storeValue
+          return (target[key] as Function)()
         }
         middleware.use(middlewares)
         middleware.run({
@@ -84,13 +84,13 @@ export const useCreateStore = <T extends Record<string, (value: any) => any>>(pr
           type: "set",
           storeName,
           store: stateStore.getStore(storeName),
-          newValue: value,
-          triggerFn: target[key]
+          target,
+          value
         })
-        return value
+        return (target[key] as Function)()
       }
       if (!subscribe.has(`${storeName}-${key}`)) {
-        const off = globalSignal.on(`${storeName}-${key}`, target[key])
+        const off = globalSignal.on(`${storeName}-${key}`, target[key] as unknown as Function)
         subscribe.add(`${storeName}-${key}`)
         unsubscribe.add(off)
       }

@@ -6,8 +6,8 @@ export class MiddlewareManager {
   #middlewares: Middleware[] = []
 
   use(middlewares: Middleware[]) {
-    this.#middlewares = middlewares
-    this.#middlewares.push(setStore)
+    this.#middlewares = [...middlewares, setStore]
+    // this.#middlewares.push(setStore)
   }
 
   async run(ctx: Context) {

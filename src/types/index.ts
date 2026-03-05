@@ -22,9 +22,9 @@ export type Context = {
     key: string
 
     /**
-     * - set时新值
+     * - 触发函数队项
      */
-    newValue?: any,
+    target?: any,
 
     /**
      * 仓库信息
@@ -32,9 +32,9 @@ export type Context = {
     store: Record<string, any>,
 
     /**
-     * 触发函数
+     * - 新值
      */
-    triggerFn: (value?: any) => any
+    value: any
 }
 export type Next = () => Promise<void>
 export type Middleware = (ctx: Context, next: Next) => Promise<void>
