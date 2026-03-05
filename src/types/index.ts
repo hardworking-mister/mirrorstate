@@ -17,17 +17,24 @@ export type Context = {
      */
     storeName: string
     /**
-     * - 当前值的key
+     * - 触发的key
      */
     key: string
+
     /**
-     * - 当前值
+     * - set时新值
      */
-    value?: any
+    newValue?: any,
+
     /**
-     * - set时心值
+     * 仓库信息
      */
-    newValue?: any
+    store: Record<string, any>,
+
+    /**
+     * 触发函数
+     */
+    triggerFn: (value?: any) => any
 }
 export type Next = () => Promise<void>
 export type Middleware = (ctx: Context, next: Next) => Promise<void>

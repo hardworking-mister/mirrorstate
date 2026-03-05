@@ -1,7 +1,8 @@
 import { globalSignal, stateStore, middleware } from "./core"
 import type { State, Initial } from "./types"
 
-const compomentMapId = new Map<string, Set<string>>()
+const componentSubscribe = new Map<string, Set<string>>()
+const componentOff = new Map<string, Set<Function>>()
 
 /**
  * 清理函数 当组件卸载时调用
@@ -9,16 +10,16 @@ const compomentMapId = new Map<string, Set<string>>()
  * @returns void
  */
 export const cleanup = (id: string) => {
-  if (!compomentMapId.has(id)) {
-    return
-  }
-  const compomentKey = compomentMapId.get(id) as Set<string | Function>
-  compomentKey.forEach((item) => {
-    if (typeof item === "function") {
+  if (componentSubscribe.has(id)) {
+    const unsubscribe = componentOff.get(id) as Set<Function>
+    unsubscribe.forEach((item) => {
       item()
-    }
-  })
-  compomentMapId.delete(id)
+    })
+    componentSubscribe.delete(id)
+    componentOff.delete(id)
+  } else {
+    console.warn(`${id} not found`)
+  }
 }
 
 /**
@@ -27,7 +28,7 @@ export const cleanup = (id: string) => {
  * @returns 数据对象
  */
 export const useCreateStore = <T extends Record<string, (value: any) => any>>(props: Initial<T>): State<T> => {
-  const { storeName, useManager, componentId, middlewares = [] } = props
+  const { storeName, useManager, middlewares = [], componentId } = props
   if (typeof storeName !== 'string') {
     throw new Error('storeName must be a string')
   }
@@ -44,12 +45,14 @@ export const useCreateStore = <T extends Record<string, (value: any) => any>>(pr
     stateStore.add(storeName, current)
   }
 
-  // 判断组件是否为新组件
-  if (!compomentMapId.has(componentId)) {
-    compomentMapId.set(componentId, new Set())
+  if (!componentSubscribe.has(componentId)) {
+    componentSubscribe.set(componentId, new Set())
+    componentOff.set(componentId, new Set())
   }
 
-  const compomentKey = compomentMapId.get(componentId) as Set<string | Function>
+  const subscribe = componentSubscribe.get(componentId) as Set<string>
+  const unsubscribe = componentOff.get(componentId) as Set<Function>
+
   const proxy = new Proxy(state, {
     get: (target, property) => {
       const key = String(property)
@@ -64,8 +67,10 @@ export const useCreateStore = <T extends Record<string, (value: any) => any>>(pr
           middleware.run({
             key,
             type: "get",
+            newValue: (target[key] as Function)(),
             storeName,
-            value: storeValue,
+            store: stateStore.getStore(storeName),
+            triggerFn: target[key] as () => any
           })
           return (target[key] as Function)()
         }
@@ -78,17 +83,16 @@ export const useCreateStore = <T extends Record<string, (value: any) => any>>(pr
           key,
           type: "set",
           storeName,
-          value: storeValue,
-          newValue: value
+          store: stateStore.getStore(storeName),
+          newValue: value,
+          triggerFn: target[key]
         })
         return value
       }
-
-      if (!compomentKey.has(`${storeName}-${key}`)) {
-        target[key](stateStore.getValue(storeName, key))
+      if (!subscribe.has(`${storeName}-${key}`)) {
         const off = globalSignal.on(`${storeName}-${key}`, target[key])
-        compomentKey.add(`${storeName}-${key}`)
-        compomentKey.add(off)
+        subscribe.add(`${storeName}-${key}`)
+        unsubscribe.add(off)
       }
       return set
     },

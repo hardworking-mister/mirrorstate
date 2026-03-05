@@ -83,7 +83,7 @@ export class PubSub {
         set.forEach((item) => {
             item(...args)
         })
-
+        console.log(this.#events);
         return true
     }
 
