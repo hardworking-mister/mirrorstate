@@ -1,7 +1,7 @@
-import { useCreateStore, batch, cleanup } from "./use"
+import { createStore, batch, cleanup } from "./use"
 
 export {
-  useCreateStore,
+  createStore,
   batch,
   cleanup
 }
