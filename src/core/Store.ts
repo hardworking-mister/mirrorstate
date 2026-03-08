@@ -34,9 +34,13 @@ class Store<T extends Record<string, any>> {
      */
     setValue<K extends keyof T>(storeName: string, key: K, value: T[K]) {
         const state = this.#store.get(storeName)
-        if (state) {
-            state[key] = value
+        if (!state) {
+            throw new Error("repository does not exist")
         }
+        if (!Object.hasOwn(state, key)) {
+            throw new Error("Attribute does not exist does not exist")
+        }
+        state[key] = value
     }
     /**
      * 获取状态函数
@@ -46,9 +50,13 @@ class Store<T extends Record<string, any>> {
      */
     getValue(storeName: string, key: string) {
         const state = this.#store.get(storeName)
-        if (state) {
-            return state[key]
+        if (!state) {
+            throw new Error("repository does not exist")
         }
+        if (!Object.hasOwn(state, key)) {
+            throw new Error("Attribute does not exist does not exist")
+        }
+        return state[key]
     }
 
     /**
@@ -68,6 +76,14 @@ class Store<T extends Record<string, any>> {
     setStore(storeName: string, state: any) {
         const store = this.getStore(storeName)
         Object.assign(store, state)
+    }
+
+    /**
+     * 清理仓库
+     */
+
+    clear() {
+        this.#store.clear()
     }
 }
 

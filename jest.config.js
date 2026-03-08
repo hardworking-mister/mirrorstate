@@ -6,5 +6,9 @@ export default {
     moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
     // 告诉 Jest 去哪里找测试文件
     testMatch: ['**/test/**/*.test.ts', '**/test/**/*.spec.ts', "**/test/*.test.ts"],
+
+    transformIgnorePatterns: [
+        '/node_modules/'
+    ]
 };
 //# sourceMappingURL=jest.config.js.map

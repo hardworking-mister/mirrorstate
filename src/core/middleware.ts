@@ -1,5 +1,5 @@
 import type { Middleware, Context } from "../types";
-import { setStore } from "../middleware";
+import { setStore } from "../middlewares";
 
 export class MiddlewareManager {
   // 默认中间件

@@ -1,10 +1,12 @@
+import { PubSub, MiddlewareManager } from "../core"
 
 export type State<T extends Record<string, (value: any) => any>> = {
-    [K in keyof T]: (value?: ReturnType<T[K]>) => ReturnType<T[K]>
+    [K in keyof T]: (value?: () => any) => ReturnType<T[K]>
 }
 
-export type FixedState<T extends Record<string, (value?: any) => any>> = {
-    batch: () => { [K in keyof T]: T[K] extends (value?: any) => infer R ? (value?: R) => R : (value?: any) => any }
+export type FixedState<T extends Record<string, (value: any) => any>> = {
+    batch: (state: T) => void
+    cleanup: () => void
 }
 
 export type Context = {
@@ -25,15 +27,34 @@ export type Context = {
     /**
      * - 新值
      */
-    value: any
+    value: any,
+
 }
 export type Next = () => Promise<void>
 export type Middleware = (ctx: Context, next: Next) => Promise<void>
 
 export type Initial<T extends Record<string, (value: any) => any>> = {
     storeName: string,
-    setMethod: Record<string, (value?: any) => any>,
-    initial: Record<string, any>,
+    setMethod: T
     componentId: string,
     middlewares?: Middleware[]
+}
+
+export type MapSet = {
+    subscribe: Set<string>,
+    off: Set<Function>,
+    methodProxy: Set<any>
+}
+
+export type proxyConfig = {
+    currentObj: any
+    storeName: string
+    stateStore: Record<string, any>
+    middleware: MiddlewareManager
+    globalSignal: PubSub
+    middlewares: Middleware[]
+    subscribe: Set<string>
+    off: Set<Function>
+    componentId: string
+    component: Map<string, MapSet>
 }
