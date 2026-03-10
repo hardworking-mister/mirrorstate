@@ -65,7 +65,7 @@ function Counter() {
     <div>
       <p>{count()}</p>
       <button onClick={() => count(v => v + 1)}>+1</button>
-      <button onClick={() => count(0)}>重置</button>
+      <button onClick={() => count(() => 0)}>重置</button>
       
       <p>{text()}</p>
       <input value={text()} onChange={(e) => text(e.target.value)} />
@@ -114,7 +114,7 @@ const { count, text } = useCounter()
   <div>
     <p>{{ count() }}</p>
     <button @click="count(v => v + 1)">+1</button>
-    <button @click="count(0)">重置</button>
+    <button @click="count(() => 0)">重置</button>
     
     <p>{{ text() }}</p>
     <input :value="text()" @input="text($event.target.value)" />
@@ -129,7 +129,7 @@ const { count, text } = useCounter()
 ```typescript
 interface CreateStoreOptions<T> {
   // 必填：组件唯一标识，用于状态隔离
-  componentId: string | symbol
+  componentId: string
   
   // 必填：仓库名称
   storeName: string
@@ -235,7 +235,7 @@ router.beforeEach((to, from, next) => {
     return
   }
   
-  if (to.meta.permission && !hasPermission(to.meta.permission)) {
+  if (to.meta.permission && !hasPermission(() => to.meta.permission)) {
     next('/403')
     return
   }
@@ -286,7 +286,6 @@ function Receiver() {
 | 方法 | 描述 |
 |------|------|
 | `state()` | 获取状态值 |
-| `state(value)` | 直接设置状态 |
 | `state(fn)` | 函数式更新 |
 | `batch(object)` | 批量更新多个状态 |
 | `cleanup()` | 清理订阅和状态 |
@@ -309,31 +308,6 @@ interface Context {
 2. **精准更新**：状态变化只通知真正订阅的组件
 3. **自动清理**：组件卸载时自动取消所有订阅
 4. **非响应式支持**：对于不需要触发视图更新的数据（如路由状态），使用普通变量存储
-
-## 📝 TypeScript 支持
-
-```typescript
-interface UserState {
-  name: string
-  age: number
-  email: string
-}
-
-const useUser = createStore<UserState>({
-  componentId: useId(),
-  storeName: "user",
-  setMethod: {
-    name: (v) => v ? setName : name,
-    age: (v) => v ? setAge : age,
-    email: (v) => v ? setEmail : email
-  }
-})
-
-// 自动推导类型
-const { name, age } = useUser()
-name()  // string
-age(18) // number
-```
 
 ## 🤝 贡献指南
 
