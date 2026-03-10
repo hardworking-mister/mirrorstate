@@ -5,7 +5,7 @@
 一个轻量级、框架无关的响应式状态管理库，支持 React 和 Vue，让你以统一的 API 管理应用状态。
 
 [![npm version](https://img.shields.io/npm/v/mirrorstate.svg)](https://www.npmjs.com/package/mirrorstate)
-[![license](https://img.shields.io/npm/l/mirrorstate.svg)](https://github.com/yourname/mirrorstate/blob/main/LICENSE)
+[![license](https://img.shields.io/npm/l/mirrorstate.svg)](https://github.com/hardworking-mister/mirrorstate/blob/main/LICENSE)
 
 ## ✨ 特性
 

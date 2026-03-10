@@ -5,7 +5,7 @@
 A lightweight, framework-agnostic reactive state management library that supports React and Vue, allowing you to manage application state with a unified API.
 
 [![npm version](https://img.shields.io/npm/v/mirrorstate.svg)](https://www.npmjs.com/package/mirrorstate)
-[![license](https://img.shields.io/npm/l/mirrorstate.svg)](https://github.com/yourname/mirrorstate/blob/main/LICENSE)
+[![license](https://img.shields.io/npm/l/mirrorstate.svg)](https://github.com/hardworking-mister/mirrorstate/blob/main/LICENSE)
 
 ## ✨ Features
 
