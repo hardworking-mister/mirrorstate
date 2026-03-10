@@ -2,20 +2,20 @@
 
 [English](./README.en.md) | [中文](./README.md)
 
----
+A lightweight, framework-agnostic reactive state management library that supports React and Vue, allowing you to manage application state with a unified API.
 
-**Component-Autonomous State Management · Let the Framework Do What It Does Best**
+[![npm version](https://img.shields.io/npm/v/mirrorstate.svg)](https://www.npmjs.com/package/mirrorstate)
+[![license](https://img.shields.io/npm/l/mirrorstate.svg)](https://github.com/yourname/mirrorstate/blob/main/LICENSE)
 
-Bug reports: hardworking-mister@qq.com
+## ✨ Features
 
-## 🎯 Design Philosophy
-
-**MirrorState** is not just another state management library—it's a bridge that enables **framework-native state** to be shared across components.
-
-* **Component Autonomy** - State inherently belongs to components but can be shared between them
-* **Zero Learning Curve** - Use the framework APIs you already know, no need to learn a new reactivity system
-* **Framework Agnostic** - Theoretically adaptable to any framework with a component concept
-* **Type Safety** - Full TypeScript support
+* 🚀 **Framework Agnostic** - Same API works with both React and Vue
+* 📦 **Lightweight** - Core code is only 2KB, zero dependencies
+* 🎯 **On-Demand Updates** - Only components that subscribe to state changes re-render
+* 🔧 **Middleware Mechanism** - Supports logging, persistence, time travel, and more
+* 💪 **TypeScript Support** - Full type inference
+* 🧹 **Auto Cleanup** - Automatically cleans up subscriptions when components unmount
+* 🎨 **Flexible Usage** - Works for both reactive UI state and non-reactive data
 
 ## 📦 Installation
 
@@ -29,291 +29,322 @@ pnpm add mirrorstate
 
 ## 🚀 Quick Start
 
-### Vue 3
+### Usage with React
 
-```vue
-// store/user.ts
-import { cleanup, useCreateStore } from "mirrorstate"
-import { onUnmounted, ref, useId } from "vue"
+```tsx
+import { createStore } from "mirrorstate"
+import { useId, useEffect } from "react"
 
-export const useUser = () => {
+// Create a custom Hook
+const useCounter = () => {
   const componentId = useId()
+  const [count, setCount] = useState(0)
+  const [text, setText] = useState("hello")
 
-  onUnmounted(() => {
-    cleanup(componentId)
-  })
-
-  const user = useCreateStore({
-    storeName: "user",
+  const store = createStore({
     componentId,
-    useManager: () => {
-      const count = ref(0)
-      const display = ref(true)
-      
-      return {
-        // Same function, parameter determines behavior
-        count: (value) => value !== undefined ? count.value = value : count.value,
-        display: (value) => value !== undefined ? display.value = value : display.value
-      }
+    storeName: "counter",
+    setMethod: {
+      count: (v) => v ? setCount : count,
+      text: (v) => v ? setText : text
     }
   })
 
-  return user
-}
-```
-
-```vue
-// Component A - Display
-<script setup>
-import { useUser } from '../store/user'
-
-const { count } = useUser()
-</script>
-
-<template>
-  <div>{{ count() }}</div>
-</template>
-
-// Component B - Modify
-<script setup>
-import { useUser } from '../store/user'
-
-const { count } = useUser()
-
-const click = () => {
-  count(count() + 1)  // Read current value, add 1, then update
-}
-</script>
-
-<template>
-  <button @click="click">{{ count() }}</button>
-</template>
-```
-
-### React
-
-```tsx
-// store/user.ts
-import { cleanup, useCreateStore } from "mirrorstate"
-import { useId, useState, useEffect } from "react"
-
-export const useUser = () => {
-  const componentId = useId()
-  
-  // React requires manual cleanup
   useEffect(() => {
-    return () => cleanup(componentId)
+    return () => store.cleanup()
   }, [])
 
-  const user = useCreateStore({
-    componentId,
-    storeName: "user",
-    useManager: () => {
-      const [count, setCount] = useState(0)
-      
-      return {
-        setCount: (value) => {
-          if (value !== undefined) setCount(value)
-          return count  // Returns current value when called without args
-        }
-      }
-    }
-  })
-  
-  return user
-}
-```
-
-```tsx
-// Component A - Display
-import { useUser } from "../store/user"
-
-const Test = () => {
-  const { setCount } = useUser()
-  return <div>{setCount()}</div>  // Read
+  return store
 }
 
-// Component B - Modify
-const Hello = () => {
-  const { setCount } = useUser()
-  const count = setCount()  // Read current value
-  
+// Use in component
+function Counter() {
+  const { count, text } = useCounter()
+
   return (
-    <button onClick={() => {
-      setCount(setCount() + 1)  // Read current value, add 1, then update
-    }}>
-      {count}
-    </button>
+    <div>
+      <p>{count()}</p>
+      <button onClick={() => count(v => v + 1)}>+1</button>
+      <button onClick={() => count(0)}>Reset</button>
+      
+      <p>{text()}</p>
+      <input value={text()} onChange={(e) => text(e.target.value)} />
+    </div>
   )
 }
 ```
 
-## 📖 API
+### Usage with Vue
 
-### useCreateStore(props)
+```vue
+<script setup>
+import { createStore } from "mirrorstate"
+import { ref, onUnmounted } from "vue"
 
-The core method for creating shared state.
+// Create a custom composable
+const useCounter = () => {
+  const componentId = Symbol('counter')
+  const count = ref(0)
+  const text = ref("hello")
+  
+  const setCount = (value) => { count.value = value }
+  const setText = (value) => { text.value = value }
 
-```typescript
-interface Initial<T> {
-  storeName: string      // Unique store identifier
-  componentId: string    // Component ID (for cleanup)
-  middlewares?: Middleware[] // Middleware
-  useManager: () => T    // Factory function returning object of functions
+  const store = createStore({
+    componentId,
+    storeName: "counter",
+    setMethod: {
+      count: (v) => v ? setCount : count.value,
+      text: (v) => v ? setText : text.value
+    }
+  })
+
+  onUnmounted(() => {
+    store.cleanup()
+  })
+
+  return store
 }
 
-function useCreateStore<T extends Record<string, Function>>(
-  props: Initial<T>
-): State<T>
+// Use in component
+const { count, text } = useCounter()
+</script>
+
+<template>
+  <div>
+    <p>{{ count() }}</p>
+    <button @click="count(v => v + 1)">+1</button>
+    <button @click="count(0)">Reset</button>
+    
+    <p>{{ text() }}</p>
+    <input :value="text()" @input="text($event.target.value)" />
+  </div>
+</template>
 ```
 
-### cleanup(componentId)
+## 📖 Core Concepts
 
-Cleans up component-related subscriptions.
+### createStore Options
 
 ```typescript
-function cleanup(componentId: string): void
+interface CreateStoreOptions<T> {
+  // Required: Unique component identifier for state isolation
+  componentId: string | symbol
+  
+  // Required: Store name
+  storeName: string
+  
+  // Required: State definitions
+  setMethod: {
+    [K in keyof T]: (v?: any) => any
+  }
+  
+  // Optional: Middleware array
+  middlewares?: Middleware[]
+}
 ```
 
-### batch(storeName, value?)
+### The Philosophy of setMethod
 
-Batch updates state without triggering middleware.
+setMethod uses a functional design pattern, determining read or write operations through parameters:
 
 ```typescript
-function batch<T>(storeName: string, value?: T): T
+setMethod: {
+  // When no parameter is passed, returns current value (read)
+  // When parameter is passed, returns setter function (write)
+  count: (v) => v ? setCount : count,
+  
+  // Supports functional updates
+  count: (v) => v ? setCount : count  
+  // count(v => v + 1) is handled automatically
+}
 ```
 
 ### Middleware
 
-Supports custom middleware for logging, persistence, debugging, etc.
+Middleware allows you to execute custom logic before and after state changes:
 
 ```typescript
-export type Context = {
-    /**
-     * - Trigger type: set-update, get-retrieval
-     */
-    type: 'set' | 'get'
-    /**
-     * - Store name
-     */
-    storeName: string
-    /**
-     * - Key of the current value
-     */
-    key: string
-    /**
-     * - Current value
-     */
-    value?: any
-    /**
-     * - New value when setting
-     */
-    newValue?: any
-}
+import type { Middleware } from "mirrorstate"
 
-const logger = async (ctx: Context, next) => {
-  console.log(`${ctx.type}:`, ctx)
-  // Custom middleware must actively call next before return
-  // Code above next executes before update
+// Logger middleware
+const logger: Middleware = async (ctx, next) => {
+  console.log(`[${ctx.storeName}] ${ctx.key}:`, ctx.value)
   await next()
-  // Code below next executes after update
-}
-```
-
-## 🎨 Core Concepts
-
-### Function as API
-
-```typescript
-// A single function handles both get/set
-const count = (value) => {
-  if (value === undefined) {
-    return currentValue  // getter
-  }
-  currentValue = value   // setter
-  return value
+  console.log(`[${ctx.storeName}] ${ctx.key} update completed`)
 }
 
-// Usage
-count()      // Read
-count(10)    // Write
-count(count() + 1)  // Read and write
-```
-
-### Component Autonomy
-
-State is defined within components but stored globally:
-
-```typescript
-// Every component can access the same count
-Component A: count()  // 0
-Component B: count(5) // Write
-Component A: count()  // 5 (automatically synced)
-```
-
-### Cross-Framework Workflow
-
-```
-┌─────────────┐    ┌──────────────┐    ┌─────────────┐
-│  Vue Component│    │  MirrorState │    │React Component│
-│  ref reactive │ ←→ │  Store/PubSub│ ←→ │ useState    │
-└─────────────┘    └──────────────┘    └─────────────┘
-```
-
-## 🔧 Advanced Usage
-
-### Custom Middleware
-
-```typescript
 // Persistence middleware
 const persist: Middleware = async (ctx, next) => {
-  if (ctx.type === 'set') {
-    localStorage.setItem(`${ctx.storeName}-${ctx.key}`, JSON.stringify(ctx.newValue))
-  }
   await next()
+  localStorage.setItem(ctx.storeName, JSON.stringify(ctx.store))
 }
 
-// Usage
-useCreateStore({
+// Use middleware
+const store = createStore({
+  componentId: useId(),
   storeName: "user",
-  middlewares: [persist, logger],
-  // ...
+  middlewares: [logger, persist],
+  setMethod: {
+    name: (v) => v ? setName : name
+  }
 })
 ```
 
-### Batch Updates
+## 🎯 Advanced Usage
+
+### 1. Global Route State (Non-Reactive)
 
 ```typescript
-import { batch } from "mirrorstate"
+// store/route.ts
+import { createStore } from "mirrorstate"
 
-batch('user', {
-  count: 10,
-  display: false
+export const useRouteStore = () => {
+  // Use fixed ID to ensure global uniqueness
+  const componentId = "global-route-store"
+  
+  // Plain variables, don't trigger view updates
+  let currentRoute = '/'
+  let isLogin = false
+  let permissions = new Set<string>()
+  
+  const setCurrentRoute = (route: string) => { currentRoute = route }
+  const setIsLogin = (status: boolean) => { isLogin = status }
+  const setPermissions = (perms: string[]) => { permissions = new Set(perms) }
+  
+  const store = createStore({
+    componentId,
+    storeName: "route",
+    setMethod: {
+      currentRoute: (v) => v ? setCurrentRoute : currentRoute,
+      isLogin: (v) => v ? setIsLogin : isLogin,
+      permissions: (v) => v ? setPermissions : permissions,
+      hasPermission: (perm: string) => () => permissions.has(perm)
+    }
+  })
+  
+  return store
+}
+
+// Use in route guards
+router.beforeEach((to, from, next) => {
+  const { isLogin, hasPermission } = useRouteStore()
+  
+  if (to.meta.requiresAuth && !isLogin()) {
+    next('/login')
+    return
+  }
+  
+  if (to.meta.permission && !hasPermission(to.meta.permission)) {
+    next('/403')
+    return
+  }
+  
+  next()
 })
 ```
 
-## 🤔 Why Not Pinia/Zustand/Redux?
+### 2. Batch Updates
 
-| Feature | MirrorState | Pinia | Zustand | Redux |
-|---------|-------------|-------|---------|-------|
-| **Learning Curve** | 0 (use framework APIs) | Medium | Low | High |
-| **Reactivity** | Framework Native | Self-implemented | Self-implemented | Self-implemented |
-| **Bundle Size** | ~2KB | ~10KB | ~3KB | ~12KB |
-| **Framework Coupling** | None (adapter layer) | Vue-specific | React-first | Framework-agnostic |
-| **Component Autonomy** | ✅ Inherent | ❌ Global | ❌ Global | ❌ Global |
+```typescript
+const { batch } = useUser()
 
-## 📝 Notes
+// Update multiple states at once
+batch({
+  name: 'John',
+  age: 25,
+  email: 'john@example.com'
+})
+```
 
-1. **Functions must return the current value** (when called without parameters)
-2. **storeName must be globally unique**
+### 3. Component Communication
 
-## 🤝 Contributing
+```typescript
+// Component A
+function Sender() {
+  const { count } = useCounter()
+  
+  return <button onClick={() => count(100)}>Send</button>
+}
 
-PRs welcome! Especially needed:
-* Adapters for more frameworks (Svelte, Solid, Angular)
-* Test cases
-* Documentation improvements
+// Component B (auto-updates)
+function Receiver() {
+  const { count } = useCounter()  // Use same storeName
+  
+  return <div>{count()}</div>  // Auto re-renders when A updates
+}
+```
+
+## 🛠 API Reference
+
+### createStore(options)
+
+Creates a state store.
+
+### Store Instance Methods
+
+| Method | Description |
+|--------|-------------|
+| `state()` | Get state value |
+| `state(value)` | Directly set state |
+| `state(fn)` | Functional update |
+| `batch(object)` | Batch update multiple states |
+| `cleanup()` | Clean up subscriptions and state |
+
+### Middleware Context
+
+```typescript
+interface Context {
+  storeName: string  // Store name
+  key: string        // Updated key
+  store: any         // Entire store object
+  value: any         // New value
+  subscribeStore: Map<string, Set<Function>>  // Subscriber information
+}
+```
+
+## ⚡ Performance Optimization
+
+1. **On-Demand Subscription**: Only states actually used by components establish subscription relationships
+2. **Precise Updates**: State changes only notify components that actually subscribed
+3. **Auto Cleanup**: Automatically cancels all subscriptions when components unmount
+4. **Non-Reactive Support**: Use plain variables for data that doesn't need to trigger view updates (like route state)
+
+## 📝 TypeScript Support
+
+```typescript
+interface UserState {
+  name: string
+  age: number
+  email: string
+}
+
+const useUser = createStore<UserState>({
+  componentId: useId(),
+  storeName: "user",
+  setMethod: {
+    name: (v) => v ? setName : name,
+    age: (v) => v ? setAge : age,
+    email: (v) => v ? setEmail : email
+  }
+})
+
+// Automatic type inference
+const { name, age } = useUser()
+name()  // string
+age(18) // number
+```
+
+## 🤝 Contributing Guide
+
+Contributions and suggestions are welcome!
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## 📄 License
 
-MIT © 2026 hardworking-mister
+[MIT](LICENSE) © 2026

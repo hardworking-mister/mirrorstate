@@ -2,19 +2,20 @@
 
 [English](./README.en.md) | [中文](./README.md)
 
----
-**组件自治的状态管理 · 让框架做框架的事**
+一个轻量级、框架无关的响应式状态管理库，支持 React 和 Vue，让你以统一的 API 管理应用状态。
 
-bug投递: hardworking-mister@qq.com
+[![npm version](https://img.shields.io/npm/v/mirrorstate.svg)](https://www.npmjs.com/package/mirrorstate)
+[![license](https://img.shields.io/npm/l/mirrorstate.svg)](https://github.com/yourname/mirrorstate/blob/main/LICENSE)
 
-## 🎯 设计哲学
+## ✨ 特性
 
-**MirrorState** 不是又一个状态管理库，而是一个让**框架原生状态**跨组件共享的桥梁。
-
-* **组件自治** - 状态完全属于组件，但可以在组件间共享
-* **零学习成本** - 用你会的框架API，不用学新的响应式系统
-* **框架无关** - 理论适配任何具有组件概念的框架
-* **类型安全** - 完整的TypeScript支持
+* 🚀 **框架无关** - 同一套 API 同时支持 React 和 Vue
+* 📦 **轻量小巧** - 核心代码仅 2KB，零依赖
+* 🎯 **按需更新** - 只有订阅了状态变化的组件才会重新渲染
+* 🔧 **中间件机制** - 支持日志、持久化、时间旅行等扩展
+* 💪 **TypeScript 支持** - 完整的类型推导
+* 🧹 **自动清理** - 组件卸载时自动清理订阅
+* 🎨 **灵活使用** - 既可用于响应式 UI 状态，也可用于非响应式数据
 
 ## 📦 安装
 
@@ -28,294 +29,316 @@ pnpm add mirrorstate
 
 ## 🚀 快速开始
 
-### Vue 3
+### React 中使用
 
-```vue
-// store/user.ts
-import { cleanup, useCreateStore } from "mirrorstate"
-import { onUnmounted, ref, useId } from "vue"
+```tsx
+import { createStore } from "mirrorstate"
+import { useId, useEffect } from "react"
 
-export const useUser = () => {
+// 创建自定义 Hook
+const useCounter = () => {
   const componentId = useId()
+  const [count, setCount] = useState(0)
+  const [text, setText] = useState("hello")
 
-  onUnmounted(() => {
-    cleanup(componentId)
-  })
-
-  const user = useCreateStore({
-    storeName: "user",
+  const store = createStore({
     componentId,
-    useManager: () => {
-      const count = ref(0)
-      const display = ref(true)
-      
-      return {
-        // 同一函数，参数决定行为
-        count: (value) => value !== undefined ? count.value = value : count.value,
-        display: (value) => value !== undefined ? display.value = value : display.value
-      }
+    storeName: "counter",
+    setMethod: {
+      count: (v) => v ? setCount : count,
+      text: (v) => v ? setText : text
     }
   })
 
-  return user
-}
-```
-
-```vue
-// 组件A - 显示
-<script setup>
-import { useUser } from '../store/user'
-
-const { count } = useUser()
-</script>
-
-<template>
-  <div>{{ count() }}</div>
-</template>
-
-// 组件B - 修改
-<script setup>
-import { useUser } from '../store/user'
-
-const { count } = useUser()
-
-const click = () => {
-  count(count() + 1)  // 读取当前值，加1后更新
-}
-</script>
-
-<template>
-  <button @click="click">{{ count() }}</button>
-</template>
-```
-
-### React
-
-```tsx
-// store/user.ts
-import { useCreateStore } from "mirrorstate"
-import { useId, useState } from "react"
-import { useEffect } from "react"
-
-export const useUser = () => {
-  const componentId = useId()
-  
-  // React需要手动清理
   useEffect(() => {
-    return () => cleanup(componentId)
+    return () => store.cleanup()
   }, [])
 
-  const user = useCreateStore({
-    componentId,
-    storeName: "user",
-    useManager: () => {
-      const [count, setCount] = useState(0)
-      
-      return {
-        setCount: (value) => {
-          if (value !== undefined) setCount(value)
-          return count  // 无参时返回当前值
-        }
-      }
-    }
-  })
-  
-  return user
-}
-```
-
-```tsx
-// 组件A - 显示
-import { useUser } from "../store/user"
-
-const Test = () => {
-  const { setCount } = useUser()
-  return <div>{setCount()}</div>  // 读取
+  return store
 }
 
-// 组件B - 修改
-const Hello = () => {
-  const { setCount } = useUser()
-  const count = setCount()  // 读取当前值
-  
+// 在组件中使用
+function Counter() {
+  const { count, text } = useCounter()
+
   return (
-    <button onClick={() => {
-      setCount(setCount() + 1)  // 读取当前值，加1后更新
-    }}>
-      {count}
-    </button>
+    <div>
+      <p>{count()}</p>
+      <button onClick={() => count(v => v + 1)}>+1</button>
+      <button onClick={() => count(0)}>重置</button>
+      
+      <p>{text()}</p>
+      <input value={text()} onChange={(e) => text(e.target.value)} />
+    </div>
   )
 }
 ```
 
-## 📖 API
+### Vue 中使用
 
-### useCreateStore(props)
+```vue
+<script setup>
+import { createStore } from "mirrorstate"
+import { ref, onUnmounted } from "vue"
 
-创建共享状态的核心方法。
+// 创建自定义 Hook
+const useCounter = () => {
+  const componentId = Symbol('counter')
+  const count = ref(0)
+  const text = ref("hello")
+  
+  const setCount = (value) => { count.value = value }
+  const setText = (value) => { text.value = value }
 
-```typescript
-interface Initial<T> {
-  storeName: string      // 仓库唯一标识
-  componentId: string    // 组件ID（用于清理）
-  middlewares?: Middleware[] // 中间件
-  useManager: () => T    // 返回函数对象的工厂函数
+  const store = createStore({
+    componentId,
+    storeName: "counter",
+    setMethod: {
+      count: (v) => v ? setCount : count.value,
+      text: (v) => v ? setText : text.value
+    }
+  })
+
+  onUnmounted(() => {
+    store.cleanup()
+  })
+
+  return store
 }
 
-function useCreateStore<T extends Record<string, Function>>(
-  props: Initial<T>
-): State<T>
+// 在组件中使用
+const { count, text } = useCounter()
+</script>
+
+<template>
+  <div>
+    <p>{{ count() }}</p>
+    <button @click="count(v => v + 1)">+1</button>
+    <button @click="count(0)">重置</button>
+    
+    <p>{{ text() }}</p>
+    <input :value="text()" @input="text($event.target.value)" />
+  </div>
+</template>
 ```
 
-### cleanup(componentId)
+## 📖 核心概念
 
-清理组件相关的订阅。
+### createStore 配置
 
 ```typescript
-function cleanup(componentId: string): void
+interface CreateStoreOptions<T> {
+  // 必填：组件唯一标识，用于状态隔离
+  componentId: string | symbol
+  
+  // 必填：仓库名称
+  storeName: string
+  
+  // 必填：状态定义
+  setMethod: {
+    [K in keyof T]: (v?: any) => any
+  }
+  
+  // 可选：中间件数组
+  middlewares?: Middleware[]
+}
 ```
 
-### batch(storeName, value?)
+### setMethod 的设计哲学
 
-批量更新状态，不触发中间件。
+setMethod 采用函数式设计，通过参数判断是读还是写：
 
 ```typescript
-function batch<T>(storeName: string, value?: T): T
+setMethod: {
+  // 当不传参时返回当前值（读）
+  // 当传参时返回 setter 函数（写）
+  count: (v) => v ? setCount : count,
+  
+  // 支持函数式更新
+  count: (v) => v ? setCount : count  
+  // count(v => v + 1) 会自动处理
+}
 ```
 
 ### 中间件
 
-支持自定义中间件，用于日志、持久化、调试等。
+中间件让你能够在状态变更前后执行自定义逻辑：
 
 ```typescript
-export type Context = {
-    /**
-     * - 触发类型: set-更新, get-获取
-     */
-    type: 'set' | 'get'
-    /**
-     *  - 仓库名字
-     */
-    storeName: string
-    /**
-     * - 当前值的key
-     */
-    key: string
-    /**
-     * - 当前值
-     */
-    value?: any
-    /**
-     * - set时心值
-     */
-    newValue?: any
-}
+import type { Middleware } from "mirrorstate"
 
-const logger = async (ctx：Context, next) => {
-  console.log(`${ctx.type}:`, ctx)
-  // 自定义中间件在return前必须主动调用next
-  // next以上的代码在更新前执行
+// 日志中间件
+const logger: Middleware = async (ctx, next) => {
+  console.log(`[${ctx.storeName}] ${ctx.key}:`, ctx.value)
   await next()
-  // next以下代码在更新后执行
-}
-```
-
-## 🎨 核心概念
-
-### 函数即API
-
-```typescript
-// 一个函数同时处理get/set
-const count = (value) => {
-  if (value === undefined) {
-    return currentValue  // getter
-  }
-  currentValue = value   // setter
-  return value
+  console.log(`[${ctx.storeName}] ${ctx.key} 更新完成`)
 }
 
-// 使用方式
-count()      // 读取
-count(10)    // 写入
-count(count() + 1)  // 读取并写入
-```
-
-### 组件自治
-
-状态定义在组件内，但存储在全局：
-
-```typescript
-// 每个组件都能访问到同一个count
-组件A: count()  // 0
-组件B: count(5) // 写入
-组件A: count()  // 5（自动同步）
-```
-
-### 跨框架工作流
-
-```
-┌─────────────┐    ┌──────────────┐    ┌─────────────┐
-│  Vue组件    │    │  MirrorState │    │ React组件   │
-│  ref响应式  │ ←→ │  Store/PubSub│ ←→ │ useState    │
-└─────────────┘    └──────────────┘    └─────────────┘
-```
-
-## 🔧 高级用法
-
-### 自定义中间件
-
-```typescript
 // 持久化中间件
 const persist: Middleware = async (ctx, next) => {
-  if (ctx.type === 'set') {
-    localStorage.setItem(`${ctx.storeName}-${ctx.key}`, JSON.stringify(ctx.newValue))
-  }
   await next()
+  localStorage.setItem(ctx.storeName, JSON.stringify(ctx.store))
 }
 
-// 使用
-useCreateStore({
+// 使用中间件
+const store = createStore({
+  componentId: useId(),
   storeName: "user",
-  middlewares: [persist, logger],
-  // ...
+  middlewares: [logger, persist],
+  setMethod: {
+    name: (v) => v ? setName : name
+  }
 })
 ```
 
-### 批量更新
+## 🎯 高级用法
+
+### 1. 全局路由状态（非响应式）
 
 ```typescript
-import { batch } from "mirrorstate"
+// store/route.ts
+import { createStore } from "mirrorstate"
 
-batch('user', {
-  count: 10,
-  display: false
+export const useRouteStore = () => {
+  // 使用固定 ID，确保全局唯一
+  const componentId = "global-route-store"
+  
+  // 普通变量，不触发视图更新
+  let currentRoute = '/'
+  let isLogin = false
+  let permissions = new Set<string>()
+  
+  const setCurrentRoute = (route: string) => { currentRoute = route }
+  const setIsLogin = (status: boolean) => { isLogin = status }
+  const setPermissions = (perms: string[]) => { permissions = new Set(perms) }
+  
+  const store = createStore({
+    componentId,
+    storeName: "route",
+    setMethod: {
+      currentRoute: (v) => v ? setCurrentRoute : currentRoute,
+      isLogin: (v) => v ? setIsLogin : isLogin,
+      permissions: (v) => v ? setPermissions : permissions,
+      hasPermission: (perm: string) => () => permissions.has(perm)
+    }
+  })
+  
+  return store
+}
+
+// 在路由守卫中使用
+router.beforeEach((to, from, next) => {
+  const { isLogin, hasPermission } = useRouteStore()
+  
+  if (to.meta.requiresAuth && !isLogin()) {
+    next('/login')
+    return
+  }
+  
+  if (to.meta.permission && !hasPermission(to.meta.permission)) {
+    next('/403')
+    return
+  }
+  
+  next()
 })
 ```
 
-## 🤔 为什么不是 Pinia/Zustand/Redux？
+### 2. 批量更新
 
-| 特性 | MirrorState | Pinia | Zustand | Redux |
-|------|-------------|-------|---------|-------|
-| **学习曲线** | 0（用框架API） | 中 | 低 | 高 |
-| **响应式** | 框架原生 | 自己实现 | 自己实现 | 自己实现 |
-| **代码体积** | ~2KB | ~10KB | ~3KB | ~12KB |
-| **框架耦合** | 无（适配层） | Vue专用 | React优先 | 框架无关 |
-| **组件自治** | ✅ 天生 | ❌ 全局 | ❌ 全局 | ❌ 全局 |
+```typescript
+const { batch } = useUser()
 
-## 📝 注意事项
+// 一次更新多个状态
+batch({
+  name: '张三',
+  age: 25,
+  email: 'zhangsan@example.com'
+})
+```
 
-1. **函数必须返回当前值**（当无参调用时）
-2. **storeName必须在全局唯一**
+### 3. 组件间通信
 
-## 🤝 贡献
+```typescript
+// Component A
+function Sender() {
+  const { count } = useCounter()
+  
+  return <button onClick={() => count(100)}>发送</button>
+}
 
-欢迎PR！特别需要：
-* 更多框架的适配器（Svelte, Solid, Angular）
-* 测试用例
-* 文档完善
+// Component B（自动更新）
+function Receiver() {
+  const { count } = useCounter()  // 使用同一个 storeName
+  
+  return <div>{count()}</div>  // 当 A 更新时自动重新渲染
+}
+```
+
+## 🛠 API 参考
+
+### createStore(options)
+
+创建状态仓库。
+
+### Store 实例方法
+
+| 方法 | 描述 |
+|------|------|
+| `state()` | 获取状态值 |
+| `state(value)` | 直接设置状态 |
+| `state(fn)` | 函数式更新 |
+| `batch(object)` | 批量更新多个状态 |
+| `cleanup()` | 清理订阅和状态 |
+
+### 中间件上下文 (Context)
+
+```typescript
+interface Context {
+  storeName: string  // 仓库名称
+  key: string        // 更新的键名
+  store: any         // 整个仓库对象
+  value: any         // 新值
+  subscribeStore: Map<string, Set<Function>>  // 订阅者信息
+}
+```
+
+## ⚡ 性能优化
+
+1. **按需订阅**：只有组件实际使用的状态才会建立订阅关系
+2. **精准更新**：状态变化只通知真正订阅的组件
+3. **自动清理**：组件卸载时自动取消所有订阅
+4. **非响应式支持**：对于不需要触发视图更新的数据（如路由状态），使用普通变量存储
+
+## 📝 TypeScript 支持
+
+```typescript
+interface UserState {
+  name: string
+  age: number
+  email: string
+}
+
+const useUser = createStore<UserState>({
+  componentId: useId(),
+  storeName: "user",
+  setMethod: {
+    name: (v) => v ? setName : name,
+    age: (v) => v ? setAge : age,
+    email: (v) => v ? setEmail : email
+  }
+})
+
+// 自动推导类型
+const { name, age } = useUser()
+name()  // string
+age(18) // number
+```
+
+## 🤝 贡献指南
+
+欢迎贡献代码或提出建议！
 
 ## 📄 许可证
 
-MIT © 2026 hardworking-mister
-
----
+[MIT](LICENSE) © 2026
