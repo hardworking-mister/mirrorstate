@@ -32,14 +32,15 @@ export const createStore = <T extends Record<string, (value?: any) => any>>(prop
   const subscribe = componentObj.subscribe
   let methodProxy = componentObj.methodProxy
   if (subscribe.has(storeName)) {
+
     let stateProxy;
     methodProxy.forEach((item) => {
-      if (item.id === componentId) {
+      if (item.componentId === componentId) {
         stateProxy = item
       }
     })
     const { replace, proxy } = stateProxy as any
-    replace({ currentObj: setMethod })
+    replace({ currentObj: setMethod, middlewares })
     return proxy
   }
   const off = componentObj.off

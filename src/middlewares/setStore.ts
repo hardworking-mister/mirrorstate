@@ -7,5 +7,5 @@ export const setStore: Middleware = async (ctx, next) => {
     store[key] = value
     globalSignal.emit(`${storeName}-${key}`, value)
   }
-  next()
+  await next()
 }

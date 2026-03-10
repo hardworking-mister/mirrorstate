@@ -29,6 +29,10 @@ export type Context = {
      */
     value: any,
 
+    /**
+     * 
+     */
+    subscribeStore: any
 }
 export type Next = () => Promise<void>
 export type Middleware = (ctx: Context, next: Next) => Promise<void>

@@ -21,10 +21,10 @@ class Store<T extends Record<string, any>> {
         }
     }
     /**
-     * 删除数据 保留不实现
+     * 删除数据
      */
-    delete() {
-
+    delete(storeName: string) {
+        this.#store.delete(storeName)
     }
     /**
      * 设置仓库的值 更新值是调用

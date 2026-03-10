@@ -21,6 +21,7 @@ export const createProxy = (config: proxyConfig) => {
           storeName,
           store: stateStore.getStore(storeName),
           value: state[key],
+          subscribeStore: globalSignal.getAllSubscribe()
         })
       }
     },
@@ -48,7 +49,9 @@ export const createProxy = (config: proxyConfig) => {
             storeName,
             store: state,
             value: value(state[key]),
+            subscribeStore: globalSignal.getAllSubscribe()
           })
+          return
         }
 
         if (currentObj[key]() !== state[key]) {
@@ -57,6 +60,8 @@ export const createProxy = (config: proxyConfig) => {
         return currentObj[key]()
       }
       if (!subscribe.has(subscribeKey)) {
+        subscribe.add(storeName)
+        subscribe.add(subscribeKey)
         const unsubscribe = globalSignal.on(`${storeName}-${key}`, currentObj[key](true))
         off.add(unsubscribe)
       }
@@ -67,6 +72,7 @@ export const createProxy = (config: proxyConfig) => {
 
   const replace = (config: proxyConfig) => {
     currentObj = config.currentObj
+    middlewares = config.middlewares
   }
   return { proxy, replace, componentId }
 }

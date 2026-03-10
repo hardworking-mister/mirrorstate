@@ -9,6 +9,24 @@ export default {
 
     transformIgnorePatterns: [
         '/node_modules/'
-    ]
+    ],
+    // 报告收集
+    collectCoverage: true,
+    collectCoverageFrom: [
+        'src/**/*.{js,ts}',
+        '!src/types/**/*',
+    ],
+    coverageDirectory: "coverage",
+
+    coverageReporters: [
+        'html',          // HTML 报告（方便浏览器查看）
+        'lcov',          // lcov 格式（用于 CI 集成）
+        'text',          // 控制台文本输出
+    ],
+
+    reporters: [
+        'default',  // 默认的控制台报告器
+    ],
+
 };
 //# sourceMappingURL=jest.config.js.map

@@ -94,6 +94,9 @@ export class PubSub {
         this.#events.delete(keyName)
     }
 
+    getAllSubscribe() {
+        return this.#events
+    }
 }
 
 export const globalSignal = new PubSub()

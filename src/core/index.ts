@@ -1,6 +1,6 @@
 import { stateStore } from './Store';
 import { globalSignal, PubSub } from "./PubSub";
-import { middleware, MiddlewareManager } from './Middleware';
+import { middleware, MiddlewareManager } from './MiddlewareManager';
 import { createProxy } from './proxy';
 
 
