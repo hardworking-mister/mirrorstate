@@ -2,19 +2,18 @@
 
 [English](./README.en.md) | [中文](./README.md)
 
-一个轻量级、框架无关的响应式状态管理库，支持 React 和 Vue，让你以统一的 API 管理应用状态。
+一个轻量级、框架无关的响应式状态管理库，理论支持所有框架，让状态回归框架。
 
 [![npm version](https://img.shields.io/npm/v/mirrorstate.svg)](https://www.npmjs.com/package/mirrorstate)
 [![license](https://img.shields.io/npm/l/mirrorstate.svg)](https://github.com/hardworking-mister/mirrorstate/blob/main/LICENSE)
 
 ## ✨ 特性
 
-* 🚀 **框架无关** - 同一套 API 同时支持 React 和 Vue
+* 🚀 **框架无关** - 同一套 API 同时支持各种框架
 * 📦 **轻量小巧** - 核心代码仅 2KB，零依赖
 * 🎯 **按需更新** - 只有订阅了状态变化的组件才会重新渲染
-* 🔧 **中间件机制** - 支持日志、持久化、时间旅行等扩展
+* 🔧 **中间件机制** - 采用洋葱模型
 * 💪 **TypeScript 支持** - 完整的类型推导
-* 🧹 **自动清理** - 组件卸载时自动清理订阅
 * 🎨 **灵活使用** - 既可用于响应式 UI 状态，也可用于非响应式数据
 
 ## 📦 安装
@@ -76,36 +75,47 @@ function Counter() {
 
 ### Vue 中使用
 
+```js
+import {
+    createStore
+} from "mirrorstate"
+import {
+    ref,
+    onUnmounted,
+    useId
+} from "vue"
+
+const useCounter = () => {
+    const componentId = useId()
+    const count = ref(0)
+    const text = ref("hello")
+
+    const setCount = (value) => {
+        count.value = value
+    }
+    const setText = (value) => {
+        text.value = value
+    }
+
+    const store = createStore({
+        componentId,
+        storeName: "counter",
+        setMethod: {
+            count: (v) => v ? setCount : count.value,
+            text: (v) => v ? setText : text.value
+        }
+    })
+
+    onUnmounted(() => {
+        store.cleanup()
+    })
+
+    return store
+}
+```
+
 ```vue
 <script setup>
-import { createStore } from "mirrorstate"
-import { ref, onUnmounted } from "vue"
-
-// 创建自定义 Hook
-const useCounter = () => {
-  const componentId = Symbol('counter')
-  const count = ref(0)
-  const text = ref("hello")
-  
-  const setCount = (value) => { count.value = value }
-  const setText = (value) => { text.value = value }
-
-  const store = createStore({
-    componentId,
-    storeName: "counter",
-    setMethod: {
-      count: (v) => v ? setCount : count.value,
-      text: (v) => v ? setText : text.value
-    }
-  })
-
-  onUnmounted(() => {
-    store.cleanup()
-  })
-
-  return store
-}
-
 // 在组件中使用
 const { count, text } = useCounter()
 </script>
@@ -150,13 +160,14 @@ setMethod 采用函数式设计，通过参数判断是读还是写：
 
 ```typescript
 setMethod: {
-  // 当不传参时返回当前值（读）
-  // 当传参时返回 setter 函数（写）
+  // 当传入 false 时 进行值的获取-初始化
+  // 当传入 true 时 进行订阅
   count: (v) => v ? setCount : count,
   
-  // 支持函数式更新
-  count: (v) => v ? setCount : count  
-  // count(v => v + 1) 会自动处理
+  // 更新时:函数式更新
+  count(V => v + 1) 
+  // 读取时:参数为空
+  count()
 }
 ```
 

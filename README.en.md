@@ -2,20 +2,19 @@
 
 [English](./README.en.md) | [中文](./README.md)
 
-A lightweight, framework-agnostic reactive state management library supporting React and Vue, allowing you to manage application state with a unified API.
+A lightweight, framework-agnostic reactive state management library that theoretically supports all frameworks, letting state return to the framework.
 
 [![npm version](https://img.shields.io/npm/v/mirrorstate.svg)](https://www.npmjs.com/package/mirrorstate)
 [![license](https://img.shields.io/npm/l/mirrorstate.svg)](https://github.com/hardworking-mister/mirrorstate/blob/main/LICENSE)
 
 ## ✨ Features
 
-* 🚀 **Framework Agnostic** - Same API supports both React and Vue
-* 📦 **Lightweight** - Core code is only 2KB, zero dependencies
-* 🎯 **On-Demand Updates** - Only components subscribed to state changes re-render
-* 🔧 **Middleware Mechanism** - Supports logging, persistence, time travel, and other extensions
-* 💪 **TypeScript Support** - Full type inference
-* 🧹 **Automatic Cleanup** - Automatically cleans up subscriptions when components unmount
-* 🎨 **Flexible Usage** - Can be used for reactive UI state as well as non-reactive data
+* 🚀 **Framework-agnostic** - One API works with all frameworks
+* 📦 **Ultra-lightweight** - Only 2KB core, zero dependencies
+* 🎯 **On-demand updates** - Only components subscribed to state changes re-render
+* 🔧 **Middleware system** - Onion model architecture
+* 💪 **TypeScript support** - Full type inference
+* 🎨 **Flexible usage** - Works for both reactive UI state and non-reactive data
 
 ## 📦 Installation
 
@@ -29,13 +28,13 @@ pnpm add mirrorstate
 
 ## 🚀 Quick Start
 
-### Usage with React
+### Usage in React
 
 ```tsx
 import { createStore } from "mirrorstate"
 import { useId, useEffect } from "react"
 
-// Create a custom hook
+// Create custom hook
 const useCounter = () => {
   const componentId = useId()
   const [count, setCount] = useState(0)
@@ -57,7 +56,7 @@ const useCounter = () => {
   return store
 }
 
-// Use in a component
+// Use in component
 function Counter() {
   const { count, text } = useCounter()
 
@@ -74,39 +73,50 @@ function Counter() {
 }
 ```
 
-### Usage with Vue
+### Usage in Vue
+
+```js
+import {
+    createStore
+} from "mirrorstate"
+import {
+    ref,
+    onUnmounted,
+    useId
+} from "vue"
+
+const useCounter = () => {
+    const componentId = useId()
+    const count = ref(0)
+    const text = ref("hello")
+
+    const setCount = (value) => {
+        count.value = value
+    }
+    const setText = (value) => {
+        text.value = value
+    }
+
+    const store = createStore({
+        componentId,
+        storeName: "counter",
+        setMethod: {
+            count: (v) => v ? setCount : count.value,
+            text: (v) => v ? setText : text.value
+        }
+    })
+
+    onUnmounted(() => {
+        store.cleanup()
+    })
+
+    return store
+}
+```
 
 ```vue
 <script setup>
-import { createStore } from "mirrorstate"
-import { ref, onUnmounted } from "vue"
-
-// Create a custom hook
-const useCounter = () => {
-  const componentId = Symbol('counter')
-  const count = ref(0)
-  const text = ref("hello")
-  
-  const setCount = (value) => { count.value = value }
-  const setText = (value) => { text.value = value }
-
-  const store = createStore({
-    componentId,
-    storeName: "counter",
-    setMethod: {
-      count: (v) => v ? setCount : count.value,
-      text: (v) => v ? setText : text.value
-    }
-  })
-
-  onUnmounted(() => {
-    store.cleanup()
-  })
-
-  return store
-}
-
-// Use in a component
+// Use in component
 const { count, text } = useCounter()
 </script>
 
@@ -128,13 +138,13 @@ const { count, text } = useCounter()
 
 ```typescript
 interface CreateStoreOptions<T> {
-  // Required: Unique component identifier for state isolation
+  // Required: Unique component ID for state isolation
   componentId: string
   
   // Required: Store name
   storeName: string
   
-  // Required: State definitions
+  // Required: State definition
   setMethod: {
     [K in keyof T]: (v?: any) => any
   }
@@ -144,25 +154,26 @@ interface CreateStoreOptions<T> {
 }
 ```
 
-### setMethod Philosophy
+### Design Philosophy of setMethod
 
-setMethod uses a functional design that determines read or write based on parameters:
+setMethod uses functional design, distinguishing read/write by arguments:
 
 ```typescript
 setMethod: {
-  // Returns current value when no parameter is passed (read)
-  // Returns setter function when parameter is passed (write)
+  // Get/init value when argument is falsy
+  // Subscribe when argument is truthy
   count: (v) => v ? setCount : count,
   
-  // Supports functional updates
-  count: (v) => v ? setCount : count  
-  // count(v => v + 1) is handled automatically
+  // Functional update
+  count(v => v + 1) 
+  // Read (no arguments)
+  count()
 }
 ```
 
 ### Middleware
 
-Middleware allows you to execute custom logic before and after state changes:
+Middleware allows you to run custom logic before and after state changes:
 
 ```typescript
 import type { Middleware } from "mirrorstate"
@@ -171,7 +182,7 @@ import type { Middleware } from "mirrorstate"
 const logger: Middleware = async (ctx, next) => {
   console.log(`[${ctx.storeName}] ${ctx.key}:`, ctx.value)
   await next()
-  console.log(`[${ctx.storeName}] ${ctx.key} update completed`)
+  console.log(`[${ctx.storeName}] ${ctx.key} updated`)
 }
 
 // Persistence middleware
@@ -180,7 +191,7 @@ const persist: Middleware = async (ctx, next) => {
   localStorage.setItem(ctx.storeName, JSON.stringify(ctx.store))
 }
 
-// Using middleware
+// Use middleware
 const store = createStore({
   componentId: useId(),
   storeName: "user",
@@ -193,17 +204,17 @@ const store = createStore({
 
 ## 🎯 Advanced Usage
 
-### 1. Global Route State (Non-Reactive)
+### 1. Global Route State (Non-reactive)
 
 ```typescript
 // store/route.ts
 import { createStore } from "mirrorstate"
 
 export const useRouteStore = () => {
-  // Use a fixed ID to ensure global uniqueness
+  // Fixed ID for global uniqueness
   const componentId = "global-route-store"
   
-  // Plain variables, don't trigger view updates
+  // Plain variables, no view re-renders
   let currentRoute = '/'
   let isLogin = false
   let permissions = new Set<string>()
@@ -226,7 +237,7 @@ export const useRouteStore = () => {
   return store
 }
 
-// Use in route guards
+// Use in route guard
 router.beforeEach((to, from, next) => {
   const { isLogin, hasPermission } = useRouteStore()
   
@@ -244,7 +255,7 @@ router.beforeEach((to, from, next) => {
 })
 ```
 
-### 2. Batch Updates
+### 2. Batch Update
 
 ```typescript
 const { batch } = useUser()
@@ -257,7 +268,7 @@ batch({
 })
 ```
 
-### 3. Component Communication
+### 3. Inter-component Communication
 
 ```typescript
 // Component A
@@ -269,9 +280,9 @@ function Sender() {
 
 // Component B (auto-updates)
 function Receiver() {
-  const { count } = useCounter()  // Use the same storeName
+  const { count } = useCounter()  // Same storeName
   
-  return <div>{count()}</div>  // Automatically re-renders when A updates
+  return <div>{count()}</div>  // Auto-re-renders when A updates
 }
 ```
 
@@ -279,12 +290,12 @@ function Receiver() {
 
 ### createStore(options)
 
-Creates a state store.
+Create a state store.
 
 ### Store Instance Methods
 
 | Method | Description |
-|------|------|
+|--------|-------------|
 | `state()` | Get state value |
 | `state(fn)` | Functional update |
 | `batch(object)` | Batch update multiple states |
@@ -295,21 +306,21 @@ Creates a state store.
 ```typescript
 interface Context {
   storeName: string  // Store name
-  key: string        // Key being updated
-  store: any         // Entire store object
+  key: string        // Updated key
+  store: any         // Full store object
   value: any         // New value
-  subscribeStore: Map<string, Set<Function>>  // Subscriber information
+  subscribeStore: Map<string, Set<Function>>  // Subscribers
 }
 ```
 
 ## ⚡ Performance Optimization
 
-1. **On-Demand Subscription**: Subscription relationships are only established for states actually used by components
-2. **Precise Updates**: State changes only notify components that have actually subscribed
-3. **Automatic Cleanup**: All subscriptions are automatically cancelled when components unmount
-4. **Non-Reactive Support**: Use plain variables for data that doesn't need to trigger view updates (like route state)
+1. **On-demand subscription**: Only states actually used by components are subscribed
+2. **Precise updates**: State changes notify only subscribed components
+3. **Auto-cleanup**: Unsubscribe automatically when components unmount
+4. **Non-reactive support**: Use plain variables for data that doesn’t trigger view updates (e.g., route state)
 
-## 🤝 Contributing Guide
+## 🤝 Contributing
 
 Contributions and suggestions are welcome!
 
