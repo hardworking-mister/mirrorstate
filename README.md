@@ -6,6 +6,7 @@
 
 [![npm version](https://img.shields.io/npm/v/mirrorstate.svg)](https://www.npmjs.com/package/mirrorstate)
 [![license](https://img.shields.io/npm/l/mirrorstate.svg)](https://github.com/hardworking-mister/mirrorstate/blob/main/LICENSE)
+![CI](https://github.com/hardworking-mister/mirrorstate/actions/workflows/publish.yml/badge.svg)
 
 ## ✨ 特性
 
