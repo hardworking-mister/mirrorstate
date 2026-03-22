@@ -1,5 +1,6 @@
-import { createStore } from "./use"
+import { createStore, generateId } from "./use"
 
 export {
   createStore,
+  generateId
 }

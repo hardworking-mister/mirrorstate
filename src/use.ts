@@ -62,3 +62,7 @@ export const createStore = <T extends Record<string, (value?: any) => any>>(prop
   const { proxy } = stateProxy
   return proxy as State<T> & FixedState<T>
 }
+
+export const generateId = () => {
+  return `${Date.now()}-${Math.random()}`
+}
