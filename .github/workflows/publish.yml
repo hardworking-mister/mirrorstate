@@ -1,0 +1,53 @@
+name: Publish NPM Package
+
+# 触发条件：推送到 main 分支 或 创建 v* 标签（如 v1.0.0）
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # 允许打标签、写日志
+      packages: write
+
+    steps:
+      # 1. 拉取代码
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # 2. 设置 Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org/
+
+      # 3. 安装依赖
+      - name: Install dependencies
+        run: npm ci
+
+      # 4. 运行测试（必须通过才能发布）
+      - name: Run tests
+        run: npm test
+
+      # 5. 构建产物（根据你的库修改）
+      - name: Build package
+        run: npm run build
+
+      # 6. 发布到 NPM
+      - name: Publish to NPM
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      # 7. 自动生成 Git Tag 和 CHANGELOG（可选但强烈推荐）
+      - name: Create Git Tag & Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/v')
+        with:
+          generate_release_notes: true
