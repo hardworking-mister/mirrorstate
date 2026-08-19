@@ -31,12 +31,14 @@ pnpm add mirrorstate
 ### Usage in React
 
 ```tsx
-import { createStore } from "mirrorstate"
-import { useId, useEffect, useState } from "react"
+import { createStore, generateId } from "mirrorstate"
+import { useEffect, useState } from "react"
 
 // Create custom hook
 const useCounter = () => {
-  const componentId = useId()
+  // Use useState lazy init to keep generateId()'s return value stable across re-renders
+  // ⚠️ For SSR scenarios, switch to React's useId() — generateId produces different values on server/client, causing hydration mismatch
+  const [componentId] = useState(() => generateId())
   const [count, setCount] = useState(0)
   const [text, setText] = useState("hello")
 
@@ -65,7 +67,7 @@ function Counter() {
       <p>{count()}</p>
       <button onClick={() => count(v => v + 1)}>+1</button>
       <button onClick={() => count(() => 0)}>Reset</button>
-      
+
       <p>{text()}</p>
       <input value={text()} onChange={(e) => text(e.target.value)} />
     </div>
@@ -77,16 +79,18 @@ function Counter() {
 
 ```js
 import {
-    createStore
+    createStore,
+    generateId
 } from "mirrorstate"
 import {
     ref,
-    onUnmounted,
-    useId
+    onUnmounted
 } from "vue"
 
 const useCounter = () => {
-    const componentId = useId()
+    // Vue setup runs only once per component instance, so generateId() can be called directly
+    // ⚠️ For SSR scenarios, ensure server/client produce the same id — use Nuxt's useId() or pin the id in onServerPrefetch
+    const componentId = generateId()
     const count = ref(0)
     const text = ref("hello")
 
@@ -125,12 +129,35 @@ const { count, text } = useCounter()
     <p>{{ count() }}</p>
     <button @click="count(v => v + 1)">+1</button>
     <button @click="count(() => 0)">Reset</button>
-    
+
     <p>{{ text() }}</p>
     <input :value="text()" @input="text($event.target.value)" />
   </div>
 </template>
 ```
+
+### Generating the componentId
+
+`createStore` requires a `componentId` that is **stable and unique** for the lifetime of the component instance — it's used internally to isolate subscription sets per component in a Map. The library exports a `generateId()` helper:
+
+```typescript
+import { generateId } from "mirrorstate"
+
+// Uses crypto.randomUUID() by default, falls back to timestamp + random when unavailable
+const id = generateId()  // e.g. "7f2a3c1b-8d4e-4f6a-9b3c-1e2d3f4a5b6c"
+```
+
+Best practices per scenario:
+
+| Scenario | Recommended | Notes |
+|---|---|---|
+| React CSR | `const [componentId] = useState(() => generateId())` | useState lazy init keeps id stable across renders |
+| React SSR / Next.js | `import { useId } from "react"; const componentId = useId()` | React 18+ useId is SSR-safe, server/client produce the same id |
+| Vue 3 CSR | `const componentId = generateId()` | setup runs once, direct call is fine |
+| Vue 3 SSR / Nuxt | `const componentId = useId()` (Nuxt 3.5+) | Nuxt's built-in useId solves SSR consistency |
+| Global singleton store | `const componentId = "global-route-store"` | Fixed string for cross-component non-reactive state |
+
+> 💡 **Rule of thumb**: For CSR apps, use `generateId()` with a framework state primitive. For SSR apps, prefer the framework's built-in `useId()` to avoid hydration mismatch.
 
 ## 📖 Core Concepts
 

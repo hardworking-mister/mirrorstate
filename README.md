@@ -33,12 +33,13 @@ pnpm add mirrorstate
 ### React 中使用
 
 ```tsx
-import { createStore } from "mirrorstate"
-import { useId, useEffect, useState } from "react"
+import { createStore, generateId } from "mirrorstate"
+import { useEffect, useState } from "react"
 
 // 创建自定义 Hook
 const useCounter = () => {
-  const componentId = useId()
+  // 用 useState 懒初始化保存 generateId() 的返回值，保证多次渲染间 id 稳定
+  const [componentId] = useState(generateId())
   const [count, setCount] = useState(0)
   const [text, setText] = useState("hello")
 
@@ -67,7 +68,7 @@ function Counter() {
       <p>{count()}</p>
       <button onClick={() => count(v => v + 1)}>+1</button>
       <button onClick={() => count(() => 0)}>重置</button>
-      
+
       <p>{text()}</p>
       <input value={text()} onChange={(e) => text(e.target.value)} />
     </div>
@@ -79,16 +80,17 @@ function Counter() {
 
 ```js
 import {
-    createStore
+    createStore,
+    generateId
 } from "mirrorstate"
 import {
     ref,
-    onUnmounted,
-    useId
+    onUnmounted
 } from "vue"
 
 const useCounter = () => {
-    const componentId = useId()
+    // Vue setup 只在组件实例首次挂载时执行一次，可以直接调用 generateId()
+    const componentId = generateId()
     const count = ref(0)
     const text = ref("hello")
 
@@ -127,12 +129,35 @@ const { count, text } = useCounter()
     <p>{{ count() }}</p>
     <button @click="count(v => v + 1)">+1</button>
     <button @click="count(() => 0)">重置</button>
-    
+
     <p>{{ text() }}</p>
     <input :value="text()" @input="text($event.target.value)" />
   </div>
 </template>
 ```
+
+### 关于 componentId 的生成
+
+`createStore` 需要一个在该组件实例生命周期内**稳定唯一**的 `componentId`，用来在内部 Map 里隔离不同组件的订阅集合。库内提供 `generateId()` 函数：
+
+```typescript
+import { generateId } from "mirrorstate"
+
+// 默认走 crypto.randomUUID()，环境不支持时回退到时间戳+随机数
+const id = generateId()  // 例："7f2a3c1b-8d4e-4f6a-9b3c-1e2d3f4a5b6c"
+```
+
+不同场景下的最佳实践：
+
+| 场景 | 推荐写法 | 说明 |
+|---|---|---|
+| React CSR | `const [componentId] = useState(() => generateId())` | useState 懒初始化保证多次渲染间 id 稳定 |
+| React SSR / Next.js | `import { useId } from "react"; const componentId = useId()` | React 18+ 的 useId 是 SSR 安全的，server/client 生成相同 id |
+| Vue 3 CSR | `const componentId = generateId()` | setup 只执行一次，直接调即可 |
+| Vue 3 SSR / Nuxt | `const componentId = useId()` (Nuxt 3.5+) | Nuxt 内置的 useId 解决了 SSR 一致性 |
+| 全局单例 store | `const componentId = "global-route-store"` | 固定字符串，用于跨组件共享的非响应式状态 |
+
+> 💡 **简单原则**：CSR 应用直接用 `generateId()` + 框架状态原语即可；SSR 应用优先用框架自带的 `useId()`，避免水合不匹配。
 
 ## 📖 核心概念
 
