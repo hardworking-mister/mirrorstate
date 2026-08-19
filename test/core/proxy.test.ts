@@ -6,7 +6,8 @@ import type { proxyConfig } from '../../src/types'
 
 describe('Proxy 代理功能测试', () => {
     let config: proxyConfig
-    let mockSubscribe: Set<string>
+    let mockBoundStores: Set<string>
+    let mockSubscribedKeys: Set<string>
     let mockOff: Set<Function>
     let mockProxy: Set<any>
 
@@ -25,15 +26,17 @@ describe('Proxy 代理功能测试', () => {
         }
         stateStore.add(storeName, { count, name, })
 
-        mockSubscribe = new Set()
+        mockBoundStores = new Set()
+        mockSubscribedKeys = new Set()
         mockOff = new Set()
         mockProxy = new Set()
 
         let component = new Map()
         component.set("1", {
-            mockOff,
-            mockProxy,
-            mockSubscribe
+            boundStores: mockBoundStores,
+            subscribedKeys: mockSubscribedKeys,
+            off: mockOff,
+            methodProxy: mockProxy
         })
 
         config = {
@@ -46,7 +49,8 @@ describe('Proxy 代理功能测试', () => {
             middleware,
             globalSignal,
             middlewares: [],
-            subscribe: mockSubscribe,
+            boundStores: mockBoundStores,
+            subscribedKeys: mockSubscribedKeys,
             off: mockOff,
             componentId: "1",
             component,
@@ -81,23 +85,23 @@ describe('Proxy 代理功能测试', () => {
         // 访问触发订阅
         proxy.count()
 
-        expect(mockSubscribe.has('testStore-count')).toBe(true)
+        expect(mockSubscribedKeys.has('testStore-count')).toBe(true)
+        expect(mockBoundStores.has('testStore')).toBe(true)
         expect(mockOff.size).toBe(1)
     })
 
     test('重复访问同一属性不应该重复订阅', () => {
         const { proxy } = createProxy(config)
-        // 订阅一个仓库名 一个是key
         proxy.count()
         proxy.count()
 
-        expect(mockSubscribe.size).toBe(2)
+        expect(mockSubscribedKeys.size).toBe(1)
+        expect(mockBoundStores.size).toBe(1)
         expect(mockOff.size).toBe(1)
     })
 
     test('是否可以正确触发更新', () => {
         const { proxy } = createProxy(config)
-        // 订阅一个仓库名 一个是key
         proxy.count(v => v = 999)
 
         expect(proxy.count()).toBe(999)
@@ -130,5 +134,29 @@ describe('Proxy 代理功能测试', () => {
         replace(newConfig)
 
         expect(proxy.count()).toBe(999)
+    })
+
+    test('传入非函数非 undefined 值应该抛错（防止 count(100) 静默 no-op）', () => {
+        const { proxy } = createProxy(config)
+
+        // 数字
+        expect(() => (proxy as any).count(100)).toThrow(/function updater/)
+        // 字符串
+        expect(() => (proxy as any).count('hello')).toThrow(/function updater/)
+        // 对象
+        expect(() => (proxy as any).count({ a: 1 })).toThrow(/function updater/)
+    })
+
+    test('传入函数式更新不应该抛错', () => {
+        const { proxy } = createProxy(config)
+
+        expect(() => proxy.count(() => 100)).not.toThrow()
+        expect(proxy.count()).toBe(100)
+    })
+
+    test('无参数读取不应该抛错', () => {
+        const { proxy } = createProxy(config)
+
+        expect(() => proxy.count()).not.toThrow()
     })
 })

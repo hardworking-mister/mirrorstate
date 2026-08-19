@@ -6,6 +6,7 @@
 
 [![npm version](https://img.shields.io/npm/v/mirrorstate.svg)](https://www.npmjs.com/package/mirrorstate)
 [![license](https://img.shields.io/npm/l/mirrorstate.svg)](https://github.com/hardworking-mister/mirrorstate/blob/main/LICENSE)
+
 ![CI](https://github.com/hardworking-mister/mirrorstate/actions/workflows/publish.yml/badge.svg)
 
 ## ✨ 特性
@@ -33,7 +34,7 @@ pnpm add mirrorstate
 
 ```tsx
 import { createStore } from "mirrorstate"
-import { useId, useEffect } from "react"
+import { useId, useEffect, useState } from "react"
 
 // 创建自定义 Hook
 const useCounter = () => {
@@ -135,6 +136,10 @@ const { count, text } = useCounter()
 
 ## 📖 核心概念
 
+### ⚠️ 关于 React Strict Mode
+
+由于本库采用 "把状态镜像回框架原语" 的设计，React 18+ 的 Strict Mode 下首次渲染会有 stale closure 兜底逻辑被双触发，可能出现一帧闪值。建议在非 Strict Mode 下使用，或在生产环境关闭 Strict Mode。
+
 ### createStore 配置
 
 ```typescript
@@ -165,30 +170,32 @@ setMethod: {
   // 当传入 true 时 进行订阅
   count: (v) => v ? setCount : count,
   
-  // 更新时:函数式更新
-  count(V => v + 1) 
+  // 更新时:函数式更新（必须传函数，传普通值会抛错）
+  count(v => v + 1) 
   // 读取时:参数为空
   count()
 }
 ```
 
+> ⚠️ **更新只接受函数式更新**。`count(100)` 这种直接传值会抛错——请用 `count(() => 100)` 或 `count(v => 100)`。这能避免静默 no-op 的坑。
+
 ### 中间件
 
-中间件让你能够在状态变更前后执行自定义逻辑：
+中间件让你能够在状态变更前后执行自定义逻辑。**中间件必须同步调用 `next()`**，不支持在 `await` 之后调用——这保证了 `createStore` 初始化阶段的水合能同步完成。
 
 ```typescript
 import type { Middleware } from "mirrorstate"
 
 // 日志中间件
-const logger: Middleware = async (ctx, next) => {
+const logger: Middleware = (ctx, next) => {
   console.log(`[${ctx.storeName}] ${ctx.key}:`, ctx.value)
-  await next()
+  next()
   console.log(`[${ctx.storeName}] ${ctx.key} 更新完成`)
 }
 
-// 持久化中间件
-const persist: Middleware = async (ctx, next) => {
-  await next()
+// 持久化中间件（库内已内置 plugin.persistent，这里仅作示例）
+const persist: Middleware = (ctx, next) => {
+  next()
   localStorage.setItem(ctx.storeName, JSON.stringify(ctx.store))
 }
 
@@ -276,7 +283,7 @@ batch({
 function Sender() {
   const { count } = useCounter()
   
-  return <button onClick={() => count(100)}>发送</button>
+  return <button onClick={() => count(() => 100)}>发送</button>
 }
 
 // Component B（自动更新）

@@ -21,13 +21,14 @@ class Store<T extends Record<string, any>> {
         }
     }
     /**
-     * 删除数据
+     * 删除仓库（对外暴露的清理 API）
+     * @param storeName - 仓库名字
      */
     delete(storeName: string) {
         this.#store.delete(storeName)
     }
     /**
-     * 设置仓库的值 更新值是调用
+     * 设置仓库的值 更新值时调用
      * @param storeName - 仓库名字
      * @param key - 状态key
      * @param value - 新值
@@ -35,10 +36,10 @@ class Store<T extends Record<string, any>> {
     setValue<K extends keyof T>(storeName: string, key: K, value: T[K]) {
         const state = this.#store.get(storeName)
         if (!state) {
-            throw new Error("repository does not exist")
+            throw new Error(`[mirrorstate] store "${storeName}" does not exist`)
         }
         if (!Object.hasOwn(state, key)) {
-            throw new Error("Attribute does not exist does not exist")
+            throw new Error(`[mirrorstate] attribute "${String(key)}" does not exist on store "${storeName}"`)
         }
         state[key] = value
     }
@@ -51,10 +52,10 @@ class Store<T extends Record<string, any>> {
     getValue(storeName: string, key: string) {
         const state = this.#store.get(storeName)
         if (!state) {
-            throw new Error("repository does not exist")
+            throw new Error(`[mirrorstate] store "${storeName}" does not exist`)
         }
         if (!Object.hasOwn(state, key)) {
-            throw new Error("Attribute does not exist does not exist")
+            throw new Error(`[mirrorstate] attribute "${key}" does not exist on store "${storeName}"`)
         }
         return state[key]
     }
@@ -79,9 +80,8 @@ class Store<T extends Record<string, any>> {
     }
 
     /**
-     * 清理仓库
+     * 清理所有仓库
      */
-
     clear() {
         this.#store.clear()
     }

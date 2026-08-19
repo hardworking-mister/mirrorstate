@@ -23,15 +23,29 @@ export const createStore = <T extends Record<string, (value?: any) => any>>(prop
       initial[key] = (setMethod[key] as () => any)()
     }
     stateStore.add(storeName, initial)
+    // 初始化仓库：跑一次 get 中间件链，让 persistent 等插件有机会水合 initial
+    for (let key in setMethod) {
+      middleware.run({
+        type: "get", key, storeName,
+        store: initial,
+        value: initial[key],
+        subscribeStore: globalSignal.getAllSubscribe()
+      }, middlewares)
+    }
   }
 
   if (!component.has(componentId)) {
-    component.set(componentId, { subscribe: new Set(), off: new Set(), methodProxy: new Set() })
+    component.set(componentId, {
+      boundStores: new Set(),
+      subscribedKeys: new Set(),
+      off: new Set(),
+      methodProxy: new Set()
+    })
   }
   const componentObj = component.get(componentId) as MapSet
-  const subscribe = componentObj.subscribe
+  const boundStores = componentObj.boundStores
   let methodProxy = componentObj.methodProxy
-  if (subscribe.has(storeName)) {
+  if (boundStores.has(storeName)) {
 
     let stateProxy;
     methodProxy.forEach((item) => {
@@ -52,7 +66,8 @@ export const createStore = <T extends Record<string, (value?: any) => any>>(prop
     middleware,
     middlewares,
     globalSignal,
-    subscribe,
+    boundStores,
+    subscribedKeys: componentObj.subscribedKeys,
     off,
     storeName,
     component
@@ -63,6 +78,13 @@ export const createStore = <T extends Record<string, (value?: any) => any>>(prop
   return proxy as State<T> & FixedState<T>
 }
 
-export const generateId = () => {
-  return `${Date.now()}-${Math.random()}`
+/**
+ * 生成全局唯一的组件 ID
+ * 优先使用 crypto.randomUUID()，环境不支持时回退到时间戳+随机数
+ */
+export const generateId = (): string => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}`
 }

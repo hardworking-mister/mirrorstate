@@ -32,7 +32,7 @@ pnpm add mirrorstate
 
 ```tsx
 import { createStore } from "mirrorstate"
-import { useId, useEffect } from "react"
+import { useId, useEffect, useState } from "react"
 
 // Create custom hook
 const useCounter = () => {
@@ -134,6 +134,10 @@ const { count, text } = useCounter()
 
 ## 📖 Core Concepts
 
+### ⚠️ Note on React Strict Mode
+
+This library uses a "mirror state back to framework primitives" design. Under React 18+ Strict Mode, the stale-closure fallback logic may be double-invoked on first render, causing a one-frame flash. It is recommended to use without Strict Mode, or disable Strict Mode in production.
+
 ### createStore Configuration
 
 ```typescript
@@ -164,30 +168,32 @@ setMethod: {
   // Subscribe when argument is truthy
   count: (v) => v ? setCount : count,
   
-  // Functional update
+  // Functional update (must pass a function; passing a plain value throws)
   count(v => v + 1) 
   // Read (no arguments)
   count()
 }
 ```
 
+> ⚠️ **Updates only accept a function updater.** `count(100)` (passing a plain value) will throw — use `count(() => 100)` or `count(v => 100)` instead. This prevents silent no-ops.
+
 ### Middleware
 
-Middleware allows you to run custom logic before and after state changes:
+Middleware allows you to run custom logic before and after state changes. **Middlewares must call `next()` synchronously** — calling it after an `await` is not supported. This ensures hydration during `createStore` initialization completes synchronously.
 
 ```typescript
 import type { Middleware } from "mirrorstate"
 
 // Logger middleware
-const logger: Middleware = async (ctx, next) => {
+const logger: Middleware = (ctx, next) => {
   console.log(`[${ctx.storeName}] ${ctx.key}:`, ctx.value)
-  await next()
+  next()
   console.log(`[${ctx.storeName}] ${ctx.key} updated`)
 }
 
-// Persistence middleware
-const persist: Middleware = async (ctx, next) => {
-  await next()
+// Persistence middleware (the library ships plugin.persistent; this is just an example)
+const persist: Middleware = (ctx, next) => {
+  next()
   localStorage.setItem(ctx.storeName, JSON.stringify(ctx.store))
 }
 
@@ -275,7 +281,7 @@ batch({
 function Sender() {
   const { count } = useCounter()
   
-  return <button onClick={() => count(100)}>Send</button>
+  return <button onClick={() => count(() => 100)}>Send</button>
 }
 
 // Component B (auto-updates)
